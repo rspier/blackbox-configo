@@ -1,0 +1,4 @@
+blackbox.yaml
+blackbox-generated.yaml
+prometheus.yaml
+scrape-config-generated.yaml
