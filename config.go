@@ -47,7 +47,7 @@ func (c *Config) AddSimpleRule(url string, os ...ModuleOption) {
 func (c *Config) AddSimpleRuleWithRedirect(url string, os ...ModuleOption) {
 	c.AddSimpleRule(url, os...)
 	if strings.HasPrefix(url, "https://") {
-		c.AddHTTPSRedirRule(url, Status(301, 302))
+		c.AddHTTPSRedirRule(url, Status(301, 302, 308))
 	}
 }
 
