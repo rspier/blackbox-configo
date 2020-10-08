@@ -75,7 +75,9 @@ func RedirModule(status int, dest string) *Module {
 func BaseDNSModule() *bbconfig.Module {
 	c := &bbconfig.Module{
 		Prober: "dns",
-		DNS:    bbconfig.DNSProbe{},
+		DNS: bbconfig.DNSProbe{
+			IPProtocol: "ip4", // simpler to not worry about IPv6
+		},
 	}
 	return c
 }
