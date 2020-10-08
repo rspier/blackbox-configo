@@ -157,6 +157,30 @@ func NoFollowRedirects() ModuleOption {
 	}
 }
 
+func DNSAnswerFailIfMatchesRegexp(ms ...string) ModuleOption {
+	return func(m *Module) {
+		m.Module.DNS.ValidateAnswer.FailIfMatchesRegexp = ms
+	}
+}
+
+func DNSAnswerFailIfNotMatchesRegexp(ms ...string) ModuleOption {
+	return func(m *Module) {
+		m.Module.DNS.ValidateAnswer.FailIfNotMatchesRegexp = ms
+	}
+}
+
+func DNSAuthorityFailIfMatchesRegexp(ms ...string) ModuleOption {
+	return func(m *Module) {
+		m.Module.DNS.ValidateAuthority.FailIfMatchesRegexp = ms
+	}
+}
+
+func DNSAuthorityFailIfNotMatchesRegexp(ms ...string) ModuleOption {
+	return func(m *Module) {
+		m.Module.DNS.ValidateAuthority.FailIfNotMatchesRegexp = ms
+	}
+}
+
 func applyOptions(m *Module, os ...ModuleOption) {
 	if len(os) > 0 {
 		m.Name = ""
