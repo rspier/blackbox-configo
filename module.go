@@ -159,6 +159,15 @@ func NoFollowRedirects() ModuleOption {
 	}
 }
 
+func Header(h, v string) ModuleOption {
+	return func(m *Module) {
+		if m.Module.HTTP.Headers == nil {
+			m.Module.HTTP.Headers = make(map[string]string)
+		}
+		m.Module.HTTP.Headers[h] = v
+	}
+}
+
 func DNSAnswerFailIfMatchesRegexp(ms ...string) ModuleOption {
 	return func(m *Module) {
 		m.Module.DNS.ValidateAnswer.FailIfMatchesRegexp = ms
