@@ -21,6 +21,7 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/golang/glog"
 	bbconfig "github.com/prometheus/blackbox_exporter/config"
@@ -90,6 +91,37 @@ func DNSModule(qtype, qname string) *Module {
 	m := &Module{
 		Description: fmt.Sprintf("dns query for %q", qname),
 		Module:      bbm,
+	}
+	return m
+}
+
+func BaseTCPModule() *bbconfig.Module {
+	c := &bbconfig.Module{
+		Prober: "tcp",
+		TCP: bbconfig.TCPProbe{
+			IPProtocol: "ip4", // simpler to not worry about IPv6
+		},
+	}
+	return c
+
+}
+
+func formatQueryResponse(qr []bbconfig.QueryResponse) string {
+	var out string
+	for _, q := range qr {
+		out = out + fmt.Sprintf("%q -> %q,", q.Send, q.Expect)
+	}
+	return out
+
+}
+
+func TCPModule(qr []bbconfig.QueryResponse) *Module {
+	tm := BaseTCPModule()
+	tm.TCP.QueryResponse = qr
+
+	m := &Module{
+		Description: fmt.Sprintf("tcp module %s", formatQueryResponse(qr)),
+		Module:      tm,
 	}
 	return m
 }
@@ -189,6 +221,25 @@ func DNSAuthorityFailIfMatchesRegexp(ms ...string) ModuleOption {
 func DNSAuthorityFailIfNotMatchesRegexp(ms ...string) ModuleOption {
 	return func(m *Module) {
 		m.Module.DNS.ValidateAuthority.FailIfNotMatchesRegexp = ms
+	}
+}
+
+func TCPUseTLS() ModuleOption {
+	return func(m *Module) {
+		m.Module.TCP.TLS = true
+		m.Name = m.Name + "_tls"
+	}
+}
+
+func Timeout(t time.Duration) ModuleOption {
+	return func(m *Module) {
+		m.Module.Timeout = t
+	}
+}
+
+func CustomFunc(f func(*bbconfig.Module)) ModuleOption {
+	return func(m *Module) {
+		f(m.Module)
 	}
 }
 

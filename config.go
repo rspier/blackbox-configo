@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	bbconfig "github.com/prometheus/blackbox_exporter/config"
 )
@@ -88,6 +89,44 @@ func (c *Config) AddDNSRule(server, qtype, qname string, os ...ModuleOption) {
 
 	c.Modules.Add(m)
 	c.Targets.Add(m, server, m.Name)
+}
+
+func (c *Config) AddTCPRule(server string, qr []bbconfig.QueryResponse, os ...ModuleOption) {
+	m := TCPModule(qr)
+	// Do we need custom name options here?
+
+	applyOptions(m, os...)
+
+	c.Modules.Add(m)
+	c.Targets.Add(m, server, m.Name)
+}
+
+func (c *Config) AddSMTPRule(server string, os ...ModuleOption) {
+	os = append([]ModuleOption{Name("smtp"), Timeout(5 * time.Second)}, os...)
+	c.AddTCPRule(server,
+		[]bbconfig.QueryResponse{
+			bbconfig.QueryResponse{
+				Expect: `^220.+E?SMTP.*`,
+			},
+			bbconfig.QueryResponse{
+				Send: "QUIT\n",
+			},
+		},
+		os...)
+}
+
+func (c *Config) AddIMAPRule(server string, os ...ModuleOption) {
+	os = append([]ModuleOption{Name("imap"), Timeout(5 * time.Second)}, os...)
+	c.AddTCPRule(server,
+		[]bbconfig.QueryResponse{
+			bbconfig.QueryResponse{
+				Expect: `^\* OK \[.+IMAP4.+`,
+			},
+			bbconfig.QueryResponse{
+				Send: "QUIT\n",
+			},
+		},
+		os...)
 }
 
 func (c *Config) BBModules() bbconfig.Config {

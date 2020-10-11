@@ -20,6 +20,7 @@ limitations under the License.
 */
 
 import (
+	bbconfig "github.com/prometheus/blackbox_exporter/config"
 	bb "github.com/rspier/blackbox-configo"
 )
 
@@ -41,4 +42,11 @@ func config(c *bb.Config) {
 	c.AddHTTPSRedirRule("http://golang.org/")
 
 	c.AddDNSRule("8.8.8.8", "A", "www.firebase.com", bb.DNSAnswerFailIfNotMatchesRegexp("151.101.1.195", "151.101.65.195"))
+
+	c.AddSMTPRule("localhost:25")
+	c.AddIMAPRule("localhost:993", bb.TCPUseTLS(),
+		bb.CustomFunc(func(m *bbconfig.Module) {
+			m.TCP.TLSConfig.InsecureSkipVerify = true
+		}))
+
 }
