@@ -129,6 +129,20 @@ func (c *Config) AddIMAPRule(server string, os ...ModuleOption) {
 		os...)
 }
 
+func (c *Config) AddNNTPRule(server string, os ...ModuleOption) {
+	os = append([]ModuleOption{Name("nntp"), Timeout(10 * time.Second)}, os...)
+	c.AddTCPRule(server,
+		[]bbconfig.QueryResponse{
+			bbconfig.QueryResponse{
+				Expect: `^200\s`,
+			},
+			bbconfig.QueryResponse{
+				Send: "QUIT\n",
+			},
+		},
+		os...)
+}
+
 func (c *Config) BBModules() bbconfig.Config {
 	var bbm = make(map[string]bbconfig.Module)
 	for n, m := range c.Modules {
