@@ -21,6 +21,7 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang/glog"
@@ -159,96 +160,125 @@ func quoteMeta(s string) string {
 
 type ModuleOption func(*Module)
 
-func Status(s ...int) ModuleOption {
-	return func(m *Module) {
-		m.Description += fmt.Sprintf("Status(%v) ", s)
-		m.Module.HTTP.ValidStatusCodes = s
+func Status(s ...int) *Option {
+	return &Option{
+		ModuleOption: func(m *Module) {
+			m.Description += fmt.Sprintf("Status(%v) ", s)
+			m.Module.HTTP.ValidStatusCodes = s
+		},
 	}
 }
 
-func Name(n string) ModuleOption {
-	return func(m *Module) {
-		n = strings.ReplaceAll(n, " ", "-")
-		m.Name = n
+func Name(n string) *Option {
+	return &Option{
+		ModuleOption: func(m *Module) {
+			n = strings.ReplaceAll(n, " ", "-")
+			m.Name = n
+		}}
+}
+
+func Contains(cs ...string) *Option {
+	return &Option{
+		ModuleOption: func(m *Module) {
+			m.Description += fmt.Sprintf("Contains(%v) ", cs)
+
+			for _, c := range cs {
+				m.Module.HTTP.FailIfBodyNotMatchesRegexp =
+					append(m.Module.HTTP.FailIfBodyNotMatchesRegexp, quoteMeta(c))
+			}
+		}}
+
+}
+
+func NoFollowRedirects() *Option {
+	return &Option{
+		ModuleOption: func(m *Module) {
+			m.Description += "NoFollowRedirects() "
+			m.Module.HTTP.NoFollowRedirects = true
+		},
 	}
 }
 
-func Contains(cs ...string) ModuleOption {
-	return func(m *Module) {
-		m.Description += fmt.Sprintf("Contains(%v) ", cs)
-
-		for _, c := range cs {
-			m.Module.HTTP.FailIfBodyNotMatchesRegexp =
-				append(m.Module.HTTP.FailIfBodyNotMatchesRegexp, quoteMeta(c))
-		}
+func Header(h, v string) *Option {
+	return &Option{
+		ModuleOption: func(m *Module) {
+			if m.Module.HTTP.Headers == nil {
+				m.Module.HTTP.Headers = make(map[string]string)
+			}
+			m.Module.HTTP.Headers[h] = v
+		},
 	}
 }
 
-func NoFollowRedirects() ModuleOption {
-	return func(m *Module) {
-		m.Description += "NoFollowRedirects() "
-		m.Module.HTTP.NoFollowRedirects = true
+func DNSAnswerFailIfMatchesRegexp(ms ...string) *Option {
+	return &Option{
+		ModuleOption: func(m *Module) {
+			m.Module.DNS.ValidateAnswer.FailIfMatchesRegexp = ms
+		},
 	}
 }
 
-func Header(h, v string) ModuleOption {
-	return func(m *Module) {
-		if m.Module.HTTP.Headers == nil {
-			m.Module.HTTP.Headers = make(map[string]string)
-		}
-		m.Module.HTTP.Headers[h] = v
+func DNSAnswerFailIfNotMatchesRegexp(ms ...string) *Option {
+	return &Option{
+		ModuleOption: func(m *Module) {
+			m.Module.DNS.ValidateAnswer.FailIfNotMatchesRegexp = ms
+		},
 	}
 }
 
-func DNSAnswerFailIfMatchesRegexp(ms ...string) ModuleOption {
-	return func(m *Module) {
-		m.Module.DNS.ValidateAnswer.FailIfMatchesRegexp = ms
+func DNSAuthorityFailIfMatchesRegexp(ms ...string) *Option {
+	return &Option{
+		ModuleOption: func(m *Module) {
+			m.Module.DNS.ValidateAuthority.FailIfMatchesRegexp = ms
+		},
 	}
 }
 
-func DNSAnswerFailIfNotMatchesRegexp(ms ...string) ModuleOption {
-	return func(m *Module) {
-		m.Module.DNS.ValidateAnswer.FailIfNotMatchesRegexp = ms
+func DNSAuthorityFailIfNotMatchesRegexp(ms ...string) *Option {
+	return &Option{
+		ModuleOption: func(m *Module) {
+			m.Module.DNS.ValidateAuthority.FailIfNotMatchesRegexp = ms
+		},
 	}
 }
 
-func DNSAuthorityFailIfMatchesRegexp(ms ...string) ModuleOption {
-	return func(m *Module) {
-		m.Module.DNS.ValidateAuthority.FailIfMatchesRegexp = ms
+func TCPUseTLS() *Option {
+	return &Option{
+		ModuleOption: func(m *Module) {
+			m.Module.TCP.TLS = true
+			m.Name = m.Name + "_tls"
+		},
 	}
 }
 
-func DNSAuthorityFailIfNotMatchesRegexp(ms ...string) ModuleOption {
-	return func(m *Module) {
-		m.Module.DNS.ValidateAuthority.FailIfNotMatchesRegexp = ms
+func Timeout(t time.Duration) *Option {
+	return &Option{
+		ModuleOption: func(m *Module) {
+			m.Module.Timeout = t
+		},
 	}
 }
 
-func TCPUseTLS() ModuleOption {
-	return func(m *Module) {
-		m.Module.TCP.TLS = true
-		m.Name = m.Name + "_tls"
+func CustomFunc(f func(*bbconfig.Module)) *Option {
+	return &Option{
+		ModuleOption: func(m *Module) {
+			f(m.Module)
+		},
 	}
 }
 
-func Timeout(t time.Duration) ModuleOption {
-	return func(m *Module) {
-		m.Module.Timeout = t
-	}
-}
-
-func CustomFunc(f func(*bbconfig.Module)) ModuleOption {
-	return func(m *Module) {
-		f(m.Module)
-	}
-}
-
-func applyOptions(m *Module, os ...ModuleOption) {
-	if len(os) > 0 {
-		m.Name = ""
-		m.HasOptions = true
-	}
+func (m *Module) applyOptions(os ...*Option) {
+	var once sync.Once
 	for _, o := range os {
-		o(m)
+		if o.ModuleOption == nil {
+			continue
+		}
+		once.Do(func() {
+			if len(os) > 0 {
+				m.Name = ""
+				m.HasOptions = true
+			}
+		})
+		o.ModuleOption(m)
 	}
 }

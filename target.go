@@ -25,9 +25,10 @@ import (
 )
 
 type Target struct {
-	Module      string
-	Destination string
-	Name        string
+	Module         string
+	Destination    string
+	Name           string
+	ScrapeInterval int
 }
 
 type Targets struct {
@@ -37,19 +38,45 @@ type Targets struct {
 	ScrapeInterval   int
 }
 
-func (ts *Targets) Add(m *Module, d, n string) {
-	ts.Targets = append(ts.Targets, Target{m.Name, d, n})
+type TargetOption func(t *Target)
+
+func (ts *Targets) Add(m *Module, d, n string, os ...*Option) Target {
+	t := Target{
+		Module:      m.Name,
+		Destination: d,
+		Name:        n,
+	}
+	t.applyOptions(os...)
+	ts.Targets = append(ts.Targets, t)
+	return t
 }
 
-var cfgTmpl = `
+func (t *Target) applyOptions(os ...*Option) {
+	for _, o := range os {
+		if o.TargetOption == nil {
+			continue
+		}
+		o.TargetOption(t)
+	}
+}
+
+func ScrapeInterval(si int) *Option {
+	return &Option{
+		TargetOption: func(t *Target) {
+			t.ScrapeInterval = si
+		},
+	}
+}
+
+var header = `
 global:
   scrape_interval:     15s 
   evaluation_interval: 15s 
 
 scrape_configs:
-` + scCfgTmpl
+`
 
-var scCfgTmpl = `- job_name: '{{ .JobName }}'
+var scCfgTmpl = `- job_name: '{{ .JobName }}_{{ .ScrapeInterval }}'
   scrape_interval: {{ .ScrapeInterval }}s
   metrics_path: /probe
   static_configs:
@@ -79,23 +106,54 @@ var scCfgTmpl = `- job_name: '{{ .JobName }}'
 `
 
 func (ts *Targets) Marshal() []byte {
-	return ts.marshal(cfgTmpl)
+	var b bytes.Buffer
+	b.WriteString(header)
+	b.Write(ts.marshal())
+	return b.Bytes()
 }
 
 func (ts *Targets) MarshalSC() []byte {
-	return ts.marshal(scCfgTmpl)
+	return ts.marshal()
 }
 
-func (ts *Targets) marshal(t string) []byte {
-	tmpl, err := template.New("targets").Parse(t)
-	if err != nil {
-		glog.Fatal(err)
+func (ts *Targets) byScrapeInterval() map[int][]Target {
+	out := make(map[int][]Target)
+	for _, t := range ts.Targets {
+		si := t.ScrapeInterval
+		if si == 0 {
+			si = ts.ScrapeInterval
+		}
+		out[si] = append(out[si], t)
 	}
+	return out
+}
+
+var tmpl = template.Must(template.New("targets").Parse(scCfgTmpl))
+
+func (ts *Targets) marshal() []byte {
+	tsis := ts.byScrapeInterval()
 
 	var b bytes.Buffer
-	err = tmpl.Execute(&b, ts)
-	if err != nil {
-		glog.Fatal(err)
+
+	type tmplD struct {
+		JobName          string
+		ScrapeInterval   int
+		Targets          []Target
+		BlackboxHostPort string
+	}
+
+	for si, tsi := range tsis {
+		d := &tmplD{
+			JobName:          ts.JobName,
+			BlackboxHostPort: ts.BlackboxHostPort,
+			ScrapeInterval:   si,
+			Targets:          tsi,
+		}
+
+		err := tmpl.Execute(&b, d)
+		if err != nil {
+			glog.Fatal(err)
+		}
 	}
 	return b.Bytes()
 

@@ -34,9 +34,9 @@ type Config struct {
 
 // We need to check both the production site on the CDN and the local version.
 
-func (c *Config) AddSimpleRule(url string, os ...ModuleOption) {
+func (c *Config) AddSimpleRule(url string, os ...*Option) {
 	m := &Module{Name: "http_200", Module: BaseHTTPModule(200)}
-	applyOptions(m, os...)
+	m.applyOptions(os...)
 	c.Modules.Add(m)
 	n := url
 	if len(os) > 0 {
@@ -45,7 +45,7 @@ func (c *Config) AddSimpleRule(url string, os ...ModuleOption) {
 	c.Targets.Add(m, url, n)
 }
 
-func (c *Config) AddSimpleRuleWithRedirect(url string, os ...ModuleOption) {
+func (c *Config) AddSimpleRuleWithRedirect(url string, os ...*Option) {
 	c.AddSimpleRule(url, os...)
 	if strings.HasPrefix(url, "https://") {
 		c.AddHTTPSRedirRule(url, Status(301, 302, 308))
@@ -59,7 +59,7 @@ func cleanName(s string) string {
 	return idChars.ReplaceAllString(s, "_")
 }
 
-func (c *Config) AddHTTPSRedirRule(in string, os ...ModuleOption) {
+func (c *Config) AddHTTPSRedirRule(in string, os ...*Option) {
 	src := strings.Replace(in, "https://", "http://", 1)
 	dst := strings.Replace(in, "http://", "https://", 1)
 
@@ -69,40 +69,40 @@ func (c *Config) AddHTTPSRedirRule(in string, os ...ModuleOption) {
 	c.AddRedirRule(src, dst, os...)
 }
 
-func (c *Config) AddRedirRule(src, dst string, os ...ModuleOption) {
+func (c *Config) AddRedirRule(src, dst string, os ...*Option) {
 	m := RedirModule(302, dst)
 
 	n := cleanName("redir_to_" + strings.TrimPrefix(dst, "http://"))
 	os = append(os, Name(n))
-	applyOptions(m, os...)
+	m.applyOptions(os...)
 
 	c.Modules.Add(m)
-	c.Targets.Add(m, src, m.Name)
+	c.Targets.Add(m, src, m.Name, os...)
 }
 
-func (c *Config) AddDNSRule(server, qtype, qname string, os ...ModuleOption) {
+func (c *Config) AddDNSRule(server, qtype, qname string, os ...*Option) {
 	m := DNSModule(qtype, qname)
 	n := cleanName(fmt.Sprintf("dns_%s_%s", qname, qtype))
 	os = append(os, Name(n))
 
-	applyOptions(m, os...)
+	m.applyOptions(os...)
 
 	c.Modules.Add(m)
-	c.Targets.Add(m, server, m.Name)
+	c.Targets.Add(m, server, m.Name, os...)
 }
 
-func (c *Config) AddTCPRule(server string, qr []bbconfig.QueryResponse, os ...ModuleOption) {
+func (c *Config) AddTCPRule(server string, qr []bbconfig.QueryResponse, os ...*Option) {
 	m := TCPModule(qr)
 	// Do we need custom name options here?
 
-	applyOptions(m, os...)
+	m.applyOptions(os...)
 
 	c.Modules.Add(m)
-	c.Targets.Add(m, server, m.Name)
+	c.Targets.Add(m, server, m.Name, os...)
 }
 
-func (c *Config) AddSMTPRule(server string, os ...ModuleOption) {
-	os = append([]ModuleOption{Name("smtp"), Timeout(5 * time.Second)}, os...)
+func (c *Config) AddSMTPRule(server string, os ...*Option) {
+	os = append([]*Option{Name("smtp"), Timeout(5 * time.Second)}, os...)
 	c.AddTCPRule(server,
 		[]bbconfig.QueryResponse{
 			bbconfig.QueryResponse{
@@ -115,8 +115,8 @@ func (c *Config) AddSMTPRule(server string, os ...ModuleOption) {
 		os...)
 }
 
-func (c *Config) AddIMAPRule(server string, os ...ModuleOption) {
-	os = append([]ModuleOption{Name("imap"), Timeout(5 * time.Second)}, os...)
+func (c *Config) AddIMAPRule(server string, os ...*Option) {
+	os = append([]*Option{Name("imap"), Timeout(5 * time.Second)}, os...)
 	c.AddTCPRule(server,
 		[]bbconfig.QueryResponse{
 			bbconfig.QueryResponse{
@@ -129,8 +129,8 @@ func (c *Config) AddIMAPRule(server string, os ...ModuleOption) {
 		os...)
 }
 
-func (c *Config) AddNNTPRule(server string, os ...ModuleOption) {
-	os = append([]ModuleOption{Name("nntp"), Timeout(10 * time.Second)}, os...)
+func (c *Config) AddNNTPRule(server string, os ...*Option) {
+	os = append([]*Option{Name("nntp"), Timeout(10 * time.Second)}, os...)
 	c.AddTCPRule(server,
 		[]bbconfig.QueryResponse{
 			bbconfig.QueryResponse{
@@ -154,4 +154,9 @@ func (c *Config) BBModules() bbconfig.Config {
 	}
 
 	return bbc
+}
+
+type Option struct {
+	ModuleOption func(m *Module)
+	TargetOption func(t *Target)
 }
