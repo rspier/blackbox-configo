@@ -80,7 +80,7 @@ var scCfgTmpl = `- job_name: '{{ .JobName }}_{{ .ScrapeInterval }}'
   scrape_interval: {{ .ScrapeInterval }}s
   metrics_path: /probe
   static_configs:
-  - targets: {{ range .Targets }}
+  - targets:{{ range .Targets }}
     - {{.Module}}|{{.Destination}}|{{.Name}}{{end}}
   relabel_configs:
   - source_labels: [__address__]
