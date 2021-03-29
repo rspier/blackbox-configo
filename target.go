@@ -19,6 +19,8 @@ limitations under the License.
 
 import (
 	"bytes"
+	"sort"
+	"strings"
 	"text/template"
 
 	"github.com/golang/glog"
@@ -68,15 +70,14 @@ func ScrapeInterval(si int) *Option {
 	}
 }
 
-var header = `
-global:
+var header = `global:
   scrape_interval:     15s 
   evaluation_interval: 15s 
 
 scrape_configs:
 `
 
-var scCfgTmpl = `- job_name: '{{ .JobName }}_{{ .ScrapeInterval }}'
+var scCfgTmpl = `{{ range . }}- job_name: '{{ .JobName }}_{{ .ScrapeInterval }}'
   scrape_interval: {{ .ScrapeInterval }}s
   metrics_path: /probe
   static_configs:
@@ -103,6 +104,7 @@ var scCfgTmpl = `- job_name: '{{ .JobName }}_{{ .ScrapeInterval }}'
     target_label: instance
   - target_label: __address__
     replacement: {{.BlackboxHostPort}}
+{{ end }}
 `
 
 func (ts *Targets) Marshal() []byte {
@@ -130,7 +132,20 @@ func (ts *Targets) byScrapeInterval() map[int][]Target {
 
 var tmpl = template.Must(template.New("targets").Parse(scCfgTmpl))
 
+func trimScheme(s string) string {
+	return strings.TrimPrefix(strings.TrimPrefix(s, "https://"), "http://")
+}
+
+func (ts *Targets) sort() {
+	sort.SliceStable(ts.Targets, func(i, j int) bool {
+		ii := trimScheme(ts.Targets[i].Destination) + ts.Targets[i].Name + ts.Targets[i].Module
+		jj := trimScheme(ts.Targets[j].Destination) + ts.Targets[j].Name + ts.Targets[j].Module
+		return strings.Compare(ii, jj) == -1
+	})
+}
+
 func (ts *Targets) marshal() []byte {
+	ts.sort()
 	tsis := ts.byScrapeInterval()
 
 	var b bytes.Buffer
@@ -141,6 +156,7 @@ func (ts *Targets) marshal() []byte {
 		Targets          []Target
 		BlackboxHostPort string
 	}
+	var cfgs []*tmplD
 
 	for si, tsi := range tsis {
 		d := &tmplD{
@@ -149,11 +165,23 @@ func (ts *Targets) marshal() []byte {
 			ScrapeInterval:   si,
 			Targets:          tsi,
 		}
+		cfgs = append(cfgs, d)
+	}
 
-		err := tmpl.Execute(&b, d)
-		if err != nil {
-			glog.Fatal(err)
+	sort.SliceStable(cfgs, func(i, j int) bool {
+		if cfgs[i].ScrapeInterval < cfgs[j].ScrapeInterval {
+			return true
 		}
+		if cfgs[i].ScrapeInterval > cfgs[j].ScrapeInterval {
+			return false
+		}
+		// If the ScrapeIntervals are equal, sort by JobName.
+		return strings.Compare(cfgs[i].JobName, cfgs[j].JobName) == -1
+	})
+
+	err := tmpl.Execute(&b, cfgs)
+	if err != nil {
+		glog.Fatal(err)
 	}
 	return b.Bytes()
 
