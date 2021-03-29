@@ -19,10 +19,12 @@ limitations under the License.
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
 	bbconfig "github.com/prometheus/blackbox_exporter/config"
+	"gopkg.in/yaml.v2"
 )
 
 // Config represents a prometheus blackbox monitoring config, encompassing
@@ -141,6 +143,29 @@ func (c *Config) AddNNTPRule(server string, os ...*Option) {
 			},
 		},
 		os...)
+}
+
+// BBConfig is like blackbox.Config, but uses a yaml.MapSlice instead of a proper map.
+type BBConfig struct {
+	Modules yaml.MapSlice `yaml:"modules"`
+}
+
+func (c *Config) Marshal() ([]byte, error) {
+	keys := []string{}
+	var bbm = make(map[string]bbconfig.Module)
+	for n, m := range c.Modules {
+		keys = append(keys, n)
+		bbm[n] = *m.Module
+
+	}
+	sort.Strings(keys)
+
+	var bbc BBConfig
+	for _, k := range keys {
+		bbc.Modules = append(bbc.Modules, yaml.MapItem{k, bbm[k]})
+	}
+
+	return yaml.Marshal(bbc)
 }
 
 func (c *Config) BBModules() bbconfig.Config {

@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"gopkg.in/yaml.v2"
 )
 
 /*
@@ -61,11 +60,11 @@ func Main(cfg func(c *Config)) {
 
 	cfg(c)
 
-	mods, err := yaml.Marshal(c.BBModules())
+	cbs, err := c.Marshal()
 	if err != nil {
 		glog.Fatal(err)
 	}
-	ioutil.WriteFile(*blackboxFile, mods, 0666)
+	ioutil.WriteFile(*blackboxFile, cbs, 0666)
 	if !*onlySC {
 		ioutil.WriteFile(*targetsFile, c.Targets.Marshal(), 0666)
 	} else {
