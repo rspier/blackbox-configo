@@ -7,5 +7,6 @@ require (
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/prometheus/blackbox_exporter v0.18.0
 	golang.org/x/net v0.0.0-20210316092652-d523dce5a7f4 // indirect
-	gopkg.in/yaml.v2 v2.2.8
+	gopkg.in/yaml.v2 v2.2.8 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 )

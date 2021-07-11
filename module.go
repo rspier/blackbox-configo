@@ -26,7 +26,7 @@ import (
 
 	"github.com/golang/glog"
 	bbconfig "github.com/prometheus/blackbox_exporter/config"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 type Module struct {

@@ -24,7 +24,7 @@ import (
 	"time"
 
 	bbconfig "github.com/prometheus/blackbox_exporter/config"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // Config represents a prometheus blackbox monitoring config, encompassing
@@ -147,7 +147,7 @@ func (c *Config) AddNNTPRule(server string, os ...*Option) {
 
 // BBConfig is like blackbox.Config, but uses a yaml.MapSlice instead of a proper map.
 type BBConfig struct {
-	Modules yaml.MapSlice `yaml:"modules"`
+	Modules yaml.Node `yaml:"modules"`
 }
 
 func (c *Config) Marshal() ([]byte, error) {
@@ -156,16 +156,21 @@ func (c *Config) Marshal() ([]byte, error) {
 	for n, m := range c.Modules {
 		keys = append(keys, n)
 		bbm[n] = *m.Module
-
 	}
 	sort.Strings(keys)
 
 	var bbc BBConfig
+	bbc.Modules.Kind = yaml.MappingNode
 	for _, k := range keys {
-		bbc.Modules = append(bbc.Modules, yaml.MapItem{k, bbm[k]})
+		var n yaml.Node
+		n.Encode(bbm[k])
+		bbc.Modules.Content = append(bbc.Modules.Content,
+			&yaml.Node{Kind: yaml.ScalarNode, Value: k},
+			&n,
+		)
 	}
 
-	return yaml.Marshal(bbc)
+	return yaml.Marshal(&bbc)
 }
 
 func (c *Config) BBModules() bbconfig.Config {
