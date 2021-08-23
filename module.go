@@ -57,14 +57,18 @@ func HTTPModule(status int) *Module {
 	return m
 }
 
+func boolPtr(b bool) *bool {
+	return &b
+}
+
 // TODO: this doesn't actually use mm
 func RedirModule(status int, dest string) *Module {
 	bbm := BaseHTTPModule(status)
 
-	bbm.HTTP.NoFollowRedirects = true
+	bbm.HTTP.NoFollowRedirects = boolPtr(true)
 	bbm.HTTP.FailIfHeaderNotMatchesRegexp = []bbconfig.HeaderMatch{{
 		Header: "Location",
-		Regexp: quoteMeta(dest),
+		Regexp: bbconfig.MustNewRegexp(quoteMeta(dest)),
 	}}
 
 	m := &Module{
@@ -184,7 +188,7 @@ func Contains(cs ...string) *Option {
 
 			for _, c := range cs {
 				m.Module.HTTP.FailIfBodyNotMatchesRegexp =
-					append(m.Module.HTTP.FailIfBodyNotMatchesRegexp, quoteMeta(c))
+					append(m.Module.HTTP.FailIfBodyNotMatchesRegexp, bbconfig.MustNewRegexp(quoteMeta(c)))
 			}
 		}}
 
@@ -194,7 +198,7 @@ func NoFollowRedirects() *Option {
 	return &Option{
 		ModuleOption: func(m *Module) {
 			m.Description += "NoFollowRedirects() "
-			m.Module.HTTP.NoFollowRedirects = true
+			m.Module.HTTP.NoFollowRedirects = boolPtr(true)
 		},
 	}
 }

@@ -108,7 +108,7 @@ func (c *Config) AddSMTPRule(server string, os ...*Option) {
 	c.AddTCPRule(server,
 		[]bbconfig.QueryResponse{
 			bbconfig.QueryResponse{
-				Expect: `^220.+E?SMTP.*`,
+				Expect: bbconfig.MustNewRegexp(`^220.+E?SMTP.*`),
 			},
 			bbconfig.QueryResponse{
 				Send: "QUIT\n",
@@ -122,7 +122,7 @@ func (c *Config) AddIMAPRule(server string, os ...*Option) {
 	c.AddTCPRule(server,
 		[]bbconfig.QueryResponse{
 			bbconfig.QueryResponse{
-				Expect: `^\* OK \[.+IMAP4.+`,
+				Expect: bbconfig.MustNewRegexp(`^\* OK \[.+IMAP4.+`),
 			},
 			bbconfig.QueryResponse{
 				Send: "QUIT\n",
@@ -136,7 +136,7 @@ func (c *Config) AddNNTPRule(server string, os ...*Option) {
 	c.AddTCPRule(server,
 		[]bbconfig.QueryResponse{
 			bbconfig.QueryResponse{
-				Expect: `^200\s`,
+				Expect: bbconfig.MustNewRegexp(`^200\s`),
 			},
 			bbconfig.QueryResponse{
 				Send: "QUIT\n",
