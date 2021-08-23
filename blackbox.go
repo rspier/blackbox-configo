@@ -42,7 +42,6 @@ var (
 	blackboxFile   = flag.String("blackboxfile", "blackbox.yaml", "file to write the generated blackbox config to")
 	onlySC         = flag.Bool("onlysc", false, "if true, only write out scrapeconfigs")
 	jobName        = flag.String("jobname", "blackbox", "job_name for the target definition")
-	groupName      = flag.String("group", "perl", "conifguration group")
 )
 
 // Main is the generic Main function.  Pass it a function that uses the Config object, and it will handle flags and output.
