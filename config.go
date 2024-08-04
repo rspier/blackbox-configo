@@ -111,7 +111,7 @@ func (c *Config) AddSMTPRule(server string, os ...*Option) {
 				Expect: bbconfig.MustNewRegexp(`^220.+E?SMTP.*`),
 			},
 			bbconfig.QueryResponse{
-				Send: "QUIT\n",
+				Send: "QUIT\r",
 			},
 		},
 		os...)
@@ -125,7 +125,7 @@ func (c *Config) AddIMAPRule(server string, os ...*Option) {
 				Expect: bbconfig.MustNewRegexp(`^\* OK \[.+IMAP4.+`),
 			},
 			bbconfig.QueryResponse{
-				Send: "QUIT\n",
+				Send: "QUIT\r",
 			},
 		},
 		os...)
@@ -139,7 +139,7 @@ func (c *Config) AddNNTPRule(server string, os ...*Option) {
 				Expect: bbconfig.MustNewRegexp(`^200\s`),
 			},
 			bbconfig.QueryResponse{
-				Send: "QUIT\n",
+				Send: "QUIT\r",
 			},
 		},
 		os...)
