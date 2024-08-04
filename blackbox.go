@@ -18,7 +18,7 @@ limitations under the License.
 
 import (
 	"flag"
-	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/golang/glog"
@@ -63,10 +63,10 @@ func Main(cfg func(c *Config)) {
 	if err != nil {
 		glog.Fatal(err)
 	}
-	ioutil.WriteFile(*blackboxFile, cbs, 0666)
+	os.WriteFile(*blackboxFile, cbs, 0666)
 	if !*onlySC {
-		ioutil.WriteFile(*targetsFile, c.Targets.Marshal(), 0666)
+		os.WriteFile(*targetsFile, c.Targets.Marshal(), 0666)
 	} else {
-		ioutil.WriteFile(*targetsFile, c.Targets.MarshalSC(), 0666)
+		os.WriteFile(*targetsFile, c.Targets.MarshalSC(), 0666)
 	}
 }
