@@ -108,10 +108,20 @@ func (c *Config) AddSMTPRule(server string, os ...*Option) {
 	c.AddTCPRule(server,
 		[]bbconfig.QueryResponse{
 			bbconfig.QueryResponse{
-				Expect: bbconfig.MustNewRegexp(`^220.+E?SMTP.*`),
+				Expect: bbconfig.MustNewRegexp("^220 ([^ ]+) ESMTP (.+)$"),
 			},
 			bbconfig.QueryResponse{
+				Send: "HELO prober\r",
+			},
+			bbconfig.QueryResponse{
+				Expect: bbconfig.MustNewRegexp("^250"),
+			},
+			// TODO: We can support STARTTLS by conditionally inserting STARTTLS and a EHLO here.
+			bbconfig.QueryResponse{
 				Send: "QUIT\r",
+			},
+			bbconfig.QueryResponse{
+				Expect: bbconfig.MustNewRegexp("^221"),
 			},
 		},
 		os...)
