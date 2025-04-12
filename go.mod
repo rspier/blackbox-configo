@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.22.5
 
 require (
-	github.com/golang/glog v1.2.2
+	github.com/golang/glog v1.2.4
 	github.com/prometheus/blackbox_exporter v0.25.0
 	gopkg.in/yaml.v3 v3.0.1
 )
