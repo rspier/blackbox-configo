@@ -20,7 +20,11 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
+
+	bbconfig "github.com/prometheus/blackbox_exporter/config"
 )
 
 func TestCleanName(t *testing.T) {
@@ -169,4 +173,90 @@ func TestAddSimpleRuleWithRedirect(t *testing.T) {
 		})
 	}
 }
+
+func TestMoreRulesAndOptions(t *testing.T) {
+	c := &Config{
+		Modules: make(ModuleMap),
+		Targets: &Targets{},
+	}
+
+	// 1. AddDNSRule with options
+	c.AddDNSRule("8.8.8.8", "A", "example.com",
+		DNSAnswerFailIfMatchesRegexp("1.2.3.4"),
+		DNSAnswerFailIfNotMatchesRegexp("5.6.7.8"),
+		DNSAuthorityFailIfMatchesRegexp("9.9.9.9"),
+		DNSAuthorityFailIfNotMatchesRegexp("0.0.0.0"),
+		Timeout(2*time.Second),
+	)
+
+	// 2. AddTCPRule with options
+	c.AddTCPRule("localhost:80",
+		[]bbconfig.QueryResponse{{Send: "hello", Expect: bbconfig.MustNewRegexp("world")}},
+		TCPUseTLS(),
+		CustomFunc(func(m *bbconfig.Module) {
+			m.TCP.QueryResponse[0].Send = "custom"
+		}),
+	)
+
+	// 3. AddSMTPRule, AddIMAPRule, AddNNTPRule
+	c.AddSMTPRule("mail.example.com")
+	c.AddIMAPRule("imap.example.com")
+	c.AddNNTPRule("nntp.example.com")
+
+	// 4. AddSimpleRule with NoFollowRedirects, Header, Contains options
+	c.AddSimpleRule("http://example.com/contains",
+		NoFollowRedirects(),
+		Header("X-Custom", "Value"),
+		Contains("secret"),
+	)
+
+	// Verify modules count and some specific options
+	bbm := c.BBModules()
+	if len(bbm.Modules) != 6 {
+		t.Errorf("expected 6 modules in BBModules, got %d", len(bbm.Modules))
+	}
+
+	// Verify DNS module properties
+	dnsModName := cleanName("dns_example.com_A")
+	dnsMod, ok := c.Modules[dnsModName]
+	if !ok {
+		t.Fatalf("expected DNS module %q to exist", dnsModName)
+	}
+	if dnsMod.Module.DNS.QueryName != "example.com" || dnsMod.Module.DNS.QueryType != "A" {
+		t.Errorf("incorrect DNS query configuration: %+v", dnsMod.Module.DNS)
+	}
+	if dnsMod.Module.Timeout != 2*time.Second {
+		t.Errorf("expected timeout of 2s, got %v", dnsMod.Module.Timeout)
+	}
+
+	// Verify custom function modified the TCP Send
+	tcpMod, ok := c.Modules["mod_d2c2069e_tls"] // autonamed but with _tls suffix
+	if !ok {
+		// fallback search since name might vary by hash implementation/details
+		for name, mod := range c.Modules {
+			if strings.HasSuffix(name, "_tls") && mod.Module.Prober == "tcp" {
+				tcpMod = mod
+				ok = true
+				break
+			}
+		}
+	}
+	if !ok {
+		t.Fatalf("expected TCP module to exist")
+	}
+	if tcpMod.Module.TCP.QueryResponse[0].Send != "custom" {
+		t.Errorf("expected custom function option to change Send value, got %q", tcpMod.Module.TCP.QueryResponse[0].Send)
+	}
+}
+
+func TestHTTPModule(t *testing.T) {
+	m := HTTPModule(201)
+	if m.Name != "http_201" {
+		t.Errorf("expected module name http_201, got %q", m.Name)
+	}
+	if m.Module.HTTP.ValidStatusCodes[0] != 201 {
+		t.Errorf("expected status code 201, got %v", m.Module.HTTP.ValidStatusCodes)
+	}
+}
+
 

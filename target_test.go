@@ -102,5 +102,11 @@ func TestTargetsMarshalGolden(t *testing.T) {
 	if string(got) != string(want) {
 		t.Errorf("Targets.Marshal output mismatch\ngot:\n%s\nwant:\n%s", string(got), string(want))
 	}
+
+	gotSC := ts.MarshalSC()
+	if len(gotSC) == 0 {
+		t.Error("expected non-empty output from MarshalSC")
+	}
 }
+
 
