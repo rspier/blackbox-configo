@@ -1,0 +1,61 @@
+global:
+  scrape_interval:     15s 
+  evaluation_interval: 15s 
+
+scrape_configs:
+- job_name: 'test_job_30'
+  scrape_interval: 30s
+  metrics_path: /probe
+  static_configs:
+  - targets:
+    - http_200|https://example.com|example.com
+    - redir_to_https_example_com|http://example.com|redir_to_https_example_com
+  relabel_configs:
+  - source_labels: [__address__]
+    regex: (.+)\|(.+)\|(.+)
+    target_label: __param_target
+    replacement: ${2}
+  - source_labels: [__address__]
+    regex: (.+)\|(.+)\|(.+)
+    target_label: __param_module
+    replacement: ${1}
+  - source_labels: [__address__]
+    regex: (.+)\|(.+)\|(.+)
+    target_label: module
+    replacement: ${1}
+  - source_labels: [__address__]
+    regex: (.+)\|(.+)\|(.+)
+    target_label: name
+    replacement: ${3}
+  - source_labels: [__param_target]
+    target_label: instance
+  - target_label: __address__
+    replacement: localhost:9115
+- job_name: 'test_job_60'
+  scrape_interval: 60s
+  metrics_path: /probe
+  static_configs:
+  - targets:
+    - http_200|https://slow.example.com|slow.example.com
+  relabel_configs:
+  - source_labels: [__address__]
+    regex: (.+)\|(.+)\|(.+)
+    target_label: __param_target
+    replacement: ${2}
+  - source_labels: [__address__]
+    regex: (.+)\|(.+)\|(.+)
+    target_label: __param_module
+    replacement: ${1}
+  - source_labels: [__address__]
+    regex: (.+)\|(.+)\|(.+)
+    target_label: module
+    replacement: ${1}
+  - source_labels: [__address__]
+    regex: (.+)\|(.+)\|(.+)
+    target_label: name
+    replacement: ${3}
+  - source_labels: [__param_target]
+    target_label: instance
+  - target_label: __address__
+    replacement: localhost:9115
+

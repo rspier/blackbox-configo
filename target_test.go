@@ -17,6 +17,8 @@ limitations under the License.
 */
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -64,3 +66,41 @@ func TestTrimScheme(t *testing.T) {
 		})
 	}
 }
+
+func TestTargetsMarshalGolden(t *testing.T) {
+	ts := &Targets{
+		JobName:          "test_job",
+		BlackboxHostPort: "localhost:9115",
+		ScrapeInterval:   30,
+	}
+
+	m1 := &Module{Name: "http_200", Module: BaseHTTPModule(200)}
+	m2 := &Module{Name: "redir_to_https_example_com", Module: BaseHTTPModule(302)}
+
+	ts.Add(m1, "https://example.com", "example.com")
+	ts.Add(m2, "http://example.com", "redir_to_https_example_com")
+	ts.Add(m1, "https://slow.example.com", "slow.example.com", ScrapeInterval(60))
+
+	got := ts.Marshal()
+
+	goldenPath := filepath.Join("testdata", "targets_marshal.golden")
+
+	if *update {
+		if err := os.MkdirAll("testdata", 0755); err != nil {
+			t.Fatalf("failed to create testdata dir: %v", err)
+		}
+		if err := os.WriteFile(goldenPath, got, 0644); err != nil {
+			t.Fatalf("failed to write golden file: %v", err)
+		}
+	}
+
+	want, err := os.ReadFile(goldenPath)
+	if err != nil {
+		t.Fatalf("failed to read golden file (run with -update to generate): %v", err)
+	}
+
+	if string(got) != string(want) {
+		t.Errorf("Targets.Marshal output mismatch\ngot:\n%s\nwant:\n%s", string(got), string(want))
+	}
+}
+
