@@ -113,3 +113,60 @@ func TestConfigMarshalGolden(t *testing.T) {
 		t.Errorf("Marshal output mismatch\ngot:\n%s\nwant:\n%s", string(got), string(want))
 	}
 }
+
+func TestAddSimpleRuleWithRedirect(t *testing.T) {
+	tests := []struct {
+		name            string
+		url             string
+		expectedTargets []Target
+		expectedModules []string
+	}{
+		{
+			name: "HTTP URL - no redirect",
+			url:  "http://example.com",
+			expectedTargets: []Target{
+				{Module: "http_200", Destination: "http://example.com", Name: "http://example.com"},
+			},
+			expectedModules: []string{"http_200"},
+		},
+		{
+			name: "HTTPS URL - with redirect",
+			url:  "https://example.com",
+			expectedTargets: []Target{
+				{Module: "http_200", Destination: "https://example.com", Name: "https://example.com"},
+				{Module: "redir_to_https_example_com", Destination: "http://example.com", Name: "redir_to_https_example_com"},
+			},
+			expectedModules: []string{"http_200", "redir_to_https_example_com"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			c := &Config{
+				Modules: make(ModuleMap),
+				Targets: &Targets{},
+			}
+
+			c.AddSimpleRuleWithRedirect(tc.url)
+
+			// Verify targets
+			if len(c.Targets.Targets) != len(tc.expectedTargets) {
+				t.Fatalf("expected %d targets, got %d", len(tc.expectedTargets), len(c.Targets.Targets))
+			}
+			for i, gotT := range c.Targets.Targets {
+				wantT := tc.expectedTargets[i]
+				if gotT.Module != wantT.Module || gotT.Destination != wantT.Destination || gotT.Name != wantT.Name {
+					t.Errorf("target %d mismatch: got %+v, want %+v", i, gotT, wantT)
+				}
+			}
+
+			// Verify modules exist
+			for _, mName := range tc.expectedModules {
+				if _, ok := c.Modules[mName]; !ok {
+					t.Errorf("expected module %q to be added to Config.Modules", mName)
+				}
+			}
+		})
+	}
+}
+
