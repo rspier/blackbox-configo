@@ -1,0 +1,17 @@
+modules:
+    http_200:
+        prober: http
+        http:
+            valid_status_codes:
+                - 200
+            preferred_ip_protocol: ip4
+            follow_redirects: false
+            enable_http2: false
+    http_404:
+        prober: http
+        http:
+            valid_status_codes:
+                - 404
+            preferred_ip_protocol: ip4
+            follow_redirects: false
+            enable_http2: false

@@ -17,6 +17,9 @@ limitations under the License.
 */
 
 import (
+	"flag"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -66,5 +69,47 @@ func TestCleanName(t *testing.T) {
 				t.Errorf("cleanName(%q) = %q; want %q", tc.input, got, tc.expected)
 			}
 		})
+	}
+}
+
+var update = flag.Bool("update", false, "update golden files")
+
+func TestConfigMarshalGolden(t *testing.T) {
+	c := &Config{
+		Modules: make(ModuleMap),
+		Targets: &Targets{},
+	}
+	c.Modules.Add(&Module{
+		Name:   "http_200",
+		Module: BaseHTTPModule(200),
+	})
+	c.Modules.Add(&Module{
+		Name:   "http_404",
+		Module: BaseHTTPModule(404),
+	})
+
+	got, err := c.Marshal()
+	if err != nil {
+		t.Fatalf("Marshal failed: %v", err)
+	}
+
+	goldenPath := filepath.Join("testdata", "config_marshal.golden")
+
+	if *update {
+		if err := os.MkdirAll("testdata", 0755); err != nil {
+			t.Fatalf("failed to create testdata dir: %v", err)
+		}
+		if err := os.WriteFile(goldenPath, got, 0644); err != nil {
+			t.Fatalf("failed to write golden file: %v", err)
+		}
+	}
+
+	want, err := os.ReadFile(goldenPath)
+	if err != nil {
+		t.Fatalf("failed to read golden file (run with -update to generate): %v", err)
+	}
+
+	if string(got) != string(want) {
+		t.Errorf("Marshal output mismatch\ngot:\n%s\nwant:\n%s", string(got), string(want))
 	}
 }
