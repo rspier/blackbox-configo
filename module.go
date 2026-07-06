@@ -61,7 +61,6 @@ func boolPtr(b bool) *bool {
 	return &b
 }
 
-// TODO: this doesn't actually use mm
 func RedirModule(status int, dest string) *Module {
 	bbm := BaseHTTPModule(status)
 
@@ -112,11 +111,11 @@ func BaseTCPModule() *bbconfig.Module {
 }
 
 func formatQueryResponse(qr []bbconfig.QueryResponse) string {
-	var out string
+	var b strings.Builder
 	for _, q := range qr {
-		out = out + fmt.Sprintf("%q -> %q,", q.Send, q.Expect)
+		b.WriteString(fmt.Sprintf("%q -> %q,", q.Send, q.Expect))
 	}
-	return out
+	return b.String()
 
 }
 
@@ -144,11 +143,12 @@ var seq = 0
 
 func (mm ModuleMap) Add(m *Module) {
 	// If this Module isn't already named, give it one.
+	h := m.hash()
 	if len(m.Name) == 0 {
-		m.Name = "mod_" + m.hash()
+		m.Name = "mod_" + h
 	}
 
-	if existing, ok := mm[m.Name]; ok && m.HasOptions && existing.hash() != m.hash() {
+	if existing, ok := mm[m.Name]; ok && m.HasOptions && existing.hash() != h {
 		seq++
 		m.Name += fmt.Sprintf("-%d", seq)
 	}

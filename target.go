@@ -140,7 +140,7 @@ func (ts *Targets) sort() {
 	sort.SliceStable(ts.Targets, func(i, j int) bool {
 		ii := trimScheme(ts.Targets[i].Destination) + ts.Targets[i].Name + ts.Targets[i].Module
 		jj := trimScheme(ts.Targets[j].Destination) + ts.Targets[j].Name + ts.Targets[j].Module
-		return strings.Compare(ii, jj) == -1
+		return ii < jj
 	})
 }
 
@@ -176,7 +176,7 @@ func (ts *Targets) marshal() []byte {
 			return false
 		}
 		// If the ScrapeIntervals are equal, sort by JobName.
-		return strings.Compare(cfgs[i].JobName, cfgs[j].JobName) == -1
+		return cfgs[i].JobName < cfgs[j].JobName
 	})
 
 	err := tmpl.Execute(&b, cfgs)
