@@ -19,6 +19,12 @@ default:
 test:
 	go test -v ./...
 
+.PHONY: coverage
+coverage:
+	go test -coverprofile=coverage.out ./...
+	go tool cover -func=coverage.out
+	rm coverage.out
+
 # Example of running this for use in the real world with custom flags.
 run-prod:
 	go run ./cmd/example --scrape_interval=5m --blackbox=blackbox:9115 \
