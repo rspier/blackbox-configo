@@ -63,10 +63,10 @@ func Main(cfg func(c *Config)) {
 	if err != nil {
 		glog.Fatal(err)
 	}
-	os.WriteFile(*blackboxFile, cbs, 0666)
+	os.WriteFile(*blackboxFile, cbs, 0644)
 	if !*onlySC {
-		os.WriteFile(*targetsFile, c.Targets.Marshal(), 0666)
+		os.WriteFile(*targetsFile, c.Targets.Marshal(), 0644)
 	} else {
-		os.WriteFile(*targetsFile, c.Targets.MarshalSC(), 0666)
+		os.WriteFile(*targetsFile, c.Targets.MarshalSC(), 0644)
 	}
 }
