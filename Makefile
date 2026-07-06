@@ -15,6 +15,10 @@
 default:
 	echo Select a target.
 
+.PHONY: test
+test:
+	go test -v ./...
+
 # Example of running this for use in the real world with custom flags.
 run-prod:
 	go run ./cmd/example --scrape_interval=5m --blackbox=blackbox:9115 \
